@@ -135,32 +135,96 @@ function homeHtml(origin) {
     return `<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dockerhub镜像加速说明</title>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 20px; background: #f5f7fa; }
-        .container { max-width: 800px; margin: 0 auto; padding: 20px; background: #fff; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        h1 { font-size: 2em; margin-bottom: 0.5em; color: #007aff; }
-        pre { background: #2d2d2d; color: #f8f8f2; padding: 20px; border-radius: 8px; overflow-x: auto; position: relative; }
-        code { font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace; font-size: 0.875em; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Docker 镜像加速 · Cloudflare Workers</title>
+<style>
+  :root { --blue:#2496ed; --blue-d:#1d7fd1; --ink:#0f172a; --muted:#64748b; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center;
+    padding:24px; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"PingFang SC","Microsoft YaHei",sans-serif;
+    background:linear-gradient(135deg,#eef2ff,#e0f2fe 55%,#f0f9ff); color:var(--ink); }
+  .card { width:100%; max-width:720px; background:#fff; border-radius:18px;
+    box-shadow:0 20px 50px -20px rgba(36,150,237,.35); overflow:hidden; }
+  .hero { padding:32px 32px 24px; background:linear-gradient(135deg,var(--blue),#38bdf8); color:#fff; }
+  .hero .logo { font-size:34px; }
+  .hero h1 { margin:10px 0 6px; font-size:26px; letter-spacing:.5px; }
+  .hero p { margin:0; opacity:.92; font-size:14px; }
+  .body { padding:24px 32px 32px; }
+  .sec { margin-top:22px; }
+  .sec h2 { font-size:15px; color:var(--muted); margin:0 0 10px; font-weight:600;
+    display:flex; align-items:center; gap:8px; }
+  .sec h2 .tag { background:#e0f2fe; color:var(--blue-d); font-size:12px; padding:2px 8px; border-radius:999px; }
+  .cmd { position:relative; background:#0d1117; color:#e6edf3; border-radius:12px; padding:16px 48px 16px 16px;
+    font-family:"SFMono-Regular",Consolas,Menlo,monospace; font-size:13.5px; line-height:1.7; overflow-x:auto; }
+  .cmd .k { color:#7ee787; } .cmd .s { color:#a5d6ff; }
+  .copy { position:absolute; top:10px; right:10px; border:none; background:rgba(255,255,255,.12); color:#fff;
+    padding:5px 10px; border-radius:7px; font-size:12px; cursor:pointer; transition:.2s; }
+  .copy:hover { background:rgba(255,255,255,.25); }
+  .copy.ok { background:#2ea043; }
+  .field { display:flex; gap:10px; margin-top:6px; }
+  .field input { flex:1; padding:12px 14px; border:1.5px solid #e2e8f0; border-radius:10px; font-size:14px; outline:none; }
+  .field input:focus { border-color:var(--blue); }
+  .field button { border:none; background:var(--blue); color:#fff; padding:0 18px; border-radius:10px; font-size:14px; cursor:pointer; }
+  .field button:hover { background:var(--blue-d); }
+  .hint { font-size:12.5px; color:var(--muted); margin-top:8px; }
+  .note { margin-top:24px; font-size:12px; color:var(--muted); border-top:1px solid #f1f5f9; padding-top:14px; }
+  code.inline { background:#f1f5f9; padding:2px 6px; border-radius:6px; font-size:12.5px; }
+</style>
 </head>
 <body>
-    <div class="container">
-        <center><h1>镜像加速说明</h1></center>
-        <h3>为了加速镜像拉取，你可以使用以下命令设置 registry mirror:</h3>
-        <pre><code>sudo tee /etc/docker/daemon.json &lt;&lt;EOF
-{
-    "registry-mirrors": ["${origin}"]
-}
-EOF</code></pre>
-        <h3>用法:</h3>
-        <p>原拉取镜像命令</p>
-        <pre><code>docker pull library/alpine:latest</code></pre>
-        <h3>加速拉取镜像命令</h3>
-        <pre><code>docker pull ${origin}/library/alpine:latest</code></pre>
+  <div class="card">
+    <div class="hero">
+      <div class="logo">🐳</div>
+      <h1>Docker 镜像加速</h1>
+      <p>基于 Cloudflare Workers 的 Docker Hub 拉取代理 · 自动边缘缓存</p>
     </div>
+    <div class="body">
+      <div class="sec">
+        <h2>方式一 · 全局镜像（推荐）<span class="tag">一次配置</span></h2>
+        <div class="cmd" id="cmd-mirror"><span class="k">sudo</span> tee /etc/docker/daemon.json <span class="s">&lt;&lt;EOF</span>
+{
+  "registry-mirrors": ["${origin}"]
+}
+EOF<span class="copy" data-target="cmd-mirror">复制</span></div>
+        <div class="hint">配置后重启 Docker，所有 <code class="inline">docker pull</code> 自动走加速。</div>
+      </div>
+
+      <div class="sec">
+        <h2>方式二 · 前缀拉取<span class="tag">即拉即用</span></h2>
+        <div class="field">
+          <input id="img" placeholder="镜像名，如 library/alpine:latest 或 nginx:alpine" />
+          <button onclick="gen()">生成</button>
+        </div>
+        <div class="cmd" id="cmd-pull" style="margin-top:10px;"><span class="k">docker pull</span> ${origin}/library/alpine:latest<span class="copy" data-target="cmd-pull">复制</span></div>
+        <div class="hint">在镜像名前加上本服务地址即可加速单次拉取。</div>
+      </div>
+
+      <div class="note">
+        本服务仅做请求转发与边缘缓存，不存储任何镜像内容；manifest 按 tag 可变故不缓存，仅不可变的层（blobs）走缓存。
+      </div>
+    </div>
+  </div>
+
+<script>
+  function copy(btn){
+    var id = btn.getAttribute('data-target');
+    var text = document.getElementById(id).innerText.replace('复制','').trim();
+    navigator.clipboard.writeText(text).then(function(){
+      btn.textContent='已复制'; btn.classList.add('ok');
+      setTimeout(function(){ btn.textContent='复制'; btn.classList.remove('ok'); }, 1500);
+    });
+  }
+  document.querySelectorAll('.copy').forEach(function(b){ b.addEventListener('click', function(){ copy(b); }); });
+  function gen(){
+    var v = document.getElementById('img').value.trim();
+    if(!v) return;
+    v = v.replace(/^https?:\/\//,'').replace(/^[^/]+\//,''); // 容错：去掉可能误贴的协议/域名
+    document.getElementById('cmd-pull').innerHTML = '<span class="k">docker pull</span> ' + location.origin + '/' + v + '<span class="copy" data-target="cmd-pull">复制</span>';
+    document.querySelector('#cmd-pull .copy').addEventListener('click', function(){ copy(this); });
+  }
+  document.getElementById('img').addEventListener('keydown', function(e){ if(e.key==='Enter') gen(); });
+</script>
 </body>
 </html>`
 }
