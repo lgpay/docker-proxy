@@ -182,7 +182,7 @@ function homeHtml(origin) {
     <div class="body">
       <div class="sec">
         <h2>方式一 · 全局镜像（推荐）<span class="tag">一次配置</span></h2>
-        <div class="cmd" id="cmd-mirror"><span class="k">sudo</span> tee /etc/docker/daemon.json <span class="s">&lt;&lt;EOF</span>
+        <div class="cmd" id="cmd-mirror">tee /etc/docker/daemon.json <span class="s">&lt;&lt;EOF</span>
 {
   "registry-mirrors": ["${origin}"]
 }

@@ -16,7 +16,7 @@
 ### 1. 配置 registry mirror（推荐）
 
 ```bash
-sudo tee /etc/docker/daemon.json <<EOF
+tee /etc/docker/daemon.json <<EOF
 {
     "registry-mirrors": ["https://你的域名"]
 }
