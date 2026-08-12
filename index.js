@@ -9,6 +9,9 @@
 const hub_host = 'registry-1.docker.io'
 const auth_url = 'https://auth.docker.io'
 
+// favicon.ico（PNG 内容，base64 内联，避免依赖外部静态资源）
+const FAVICON_B64 = 'iVBORw0KGgoAAAANSUhEUgAAAEEAAABBCAYAAACO98lFAAAACXBIWXMAAAsSAAALEgHS3X78AAAFAElEQVR42u1cO5LbOBB9ZimXbiA5YSr6BGbAfJQxNH0Ca04wnBOsbmBOyEzKWbXUCUxlLkbSDaQq57PBtmws1PjwO+RoUYUEQ4ro168/aADz4fX1FX00NwhnADzqM82jZwAFgKLM0nMfc/vQFQgk9AqAT31e42dOAHLq265AaR0ENwgjEv6hg/nuCIxkcCCQ1tcAopoar8OQBMCmDXY0BoE0vwEwrfDaXvM3r8JvXQCsmzKjNghuEHqkjaXh0YNg17mN5ohZvtBtvhGVWVr0BoIbhGsAfxk0dKXrsQVzWwjmpmPJY5mlm05BIA0lGqd3AhC37bgY84s1vmdHrDi3DgIBkCuoeSGtx+ipuUEYEzumCvPwbYGwAsEAwJ6QP6LnRmaSAPjcBAgjCAYAnvvUvoEVT3WB0IKgAaCV0NSBr+BCtREIx/DbiQIAf0gAAADNx6f5iW1JcqAyCBQGHxQAFBhgo3lxQDyQPPbmQInQD+b5r0NjgMY0vjN/+sQpcKIxA84JJi1PNJKGizJL122YBkWOJ0Yuz2gONDnZD+w7iAILCm1i91o0jZhZoyxJPjUIFA02jB+IMM4WMf5hQ3IqmcBlYJu3SIRaYsORUeqU5FSCIGv8NIRkqAWzOOnknEi+QF6UWANAjmghDZ+pc+MJJWLyeBctlqLF3A3C6Oroxeiwkn1BxWgQMd54T4JWGfe7SKTcIJSzydU1CjqCQ3ywCJNDygUWbhCead1g0xImgZqJPmHFvLQZuLnHpNknNwhtFMbJsxJBkCl4GHJEIP/zRRj6QnQ3RYqDNOyLPkEGIa8xN+6dI/Uq4zaNY+43Nwi3ZZbmhjkub0Agu5jbgqBKd6n7zDiqjFum0zONczaB8E2KErOJIlXNLdJdMOGty/EbGnPjjKPcCosmTi6PBaGvPcAGrVAANWfC7pMbhL9L8m4Q3oDgMNTajyARrFrPWArKluWbORhn21Z8/qRL/CaWIUm0wZ8AHqVHflHvbFyYw3W3+wL77TrtKnjC5PVcTP57pIy5kC/ITSCYYvNihMLvyWQSGyc/wftpL2WW1ir+OO8IhNp1D4dZw3tSzpCPhAW2KbecX5wdJuZO5Rocbut0Q3N+Vixg5AKAwlEkHm0sqPpqVWqgPgsCec/TSEGouhXgM0nU2VEI6TfM0Poyg1XFd1jlqkBYUpIkFiReBgaAX2WhR/IsdSBwml63FYI6AqDqImqtWoM4wtJ5p8u3iQ3PIwWAWz/srkxyNHY/lfftyAkd3giAAwCvDgAkx1Tl5xxBwISJErHCufQNxHOZpV6D4m+sW1rLabO85p7L5SqikN9T8eUFwMcmW4E0/7lOzv8c0qCM6ihR50I0PDIfWONP/b9Nu9/i3/OQxyY/RBGhYORZiJHFYbQse9EpFLtRdHp0QUWQU0PBXwB8pQm2dSQwYRS0lkOr6rhOwcRU43E9Qt7Hn8sdqnakfr3ccWzbjhTH+g5llt7M6/8zS6p6Aj34yC1WCKAhA+CB33d8VIVX02HOLUZ0jI8AyBk/sCuzdFW3shQxOcEUQM4dgBqACXAAHGCoNmtBEHICDojvFc4GdA1ATD6g8pFeozlI+UOOd3rK3arQqmEEaAJF36yg7xVNAbBmgsSIBPd684VJl+/zDhQTjhLc6204hp5V7kVeoN9a/1zh8297L5LR3P3ekFUw4/7uSmvYcZ+35g2gDPL/J/wDgzLhZD6cTicAAAAASUVORK5CYII='
+
 const PREFLIGHT_INIT = {
     status: 204,
     headers: new Headers({
@@ -51,6 +54,13 @@ function upstreamHeaders(request, host) {
 async function fetchHandler(request, ctx) {
     const url = new URL(request.url)
     const workers_url = url.origin // 动态取自身域名，避免硬编码
+
+    if (url.pathname === '/favicon.ico') {
+        const bin = atob(FAVICON_B64)
+        const bytes = new Uint8Array(bin.length)
+        for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i)
+        return new Response(bytes, { headers: { 'Content-Type': 'image/x-icon' } })
+    }
 
     if (url.pathname === '/') {
         return new Response(homeHtml(workers_url), {
@@ -138,6 +148,7 @@ function homeHtml(origin) {
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Docker 镜像加速 · Cloudflare Workers</title>
+<link rel="icon" href="/favicon.ico">
 <style>
   :root { --blue:#2496ed; --blue-d:#1d7fd1; --ink:#0f172a; --muted:#64748b; }
   * { box-sizing:border-box; }
